@@ -1,0 +1,22 @@
+{
+  "users": {
+    "REPLACE_WITH_ADMIN_UID": {
+      "name": "Admin User",
+      "role": "admin",
+      "email": "admin@voicelog.com"
+    },
+    "REPLACE_WITH_DRIVER_UID": {
+      "name": "Rajesh Kumar",
+      "role": "driver",
+      "email": "driver@voicelog.com",
+      "status": "Active",
+      "completed": 0,
+      "pending": 0
+    }
+  },
+  "shipments": {},
+  "tasks": {},
+  "locations": {}
+}
+
+

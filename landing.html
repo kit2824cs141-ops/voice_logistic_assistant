@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceLog — AI-Powered Logistics Assistant</title>
+    <meta name="description" content="VoiceLog helps drivers and administrators manage deliveries seamlessly using AI voice recognition and real-time Firebase tracking.">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --g-blue:   #1a73e8;
+            --g-blue-d: #1557b0;
+            --g-blue-l: #e8f0fe;
+            --g-red:    #d93025;
+            --g-green:  #188038;
+            --g-yellow: #f29900;
+            --g-purple: #7c4dff;
+            --g-teal:   #00897b;
+            --g-dark:   #202124;
+            --g-gray:   #5f6368;
+            --g-light:  #f8f9fa;
+            --g-border: #dadce0;
+            --white:    #ffffff;
+            --t: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            color: var(--g-dark);
+            background: var(--white);
+            -webkit-font-smoothing: antialiased;
+            animation: fadeInPage 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: radial-gradient(circle at 10% 20%, rgba(26, 115, 232, 0.06) 0%, transparent 40%),
+                        radial-gradient(circle at 90% 80%, rgba(124, 77, 255, 0.06) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 20%, rgba(0, 137, 123, 0.04) 0%, transparent 30%);
+            z-index: -1;
+            animation: meshMove 20s infinite alternate ease-in-out;
+            pointer-events: none;
+        }
+        @keyframes meshMove {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.1) translate(-2%, 2%); }
+        }
+        @keyframes fadeInPage {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        a { text-decoration: none; }
+
+        /* ── NAVBAR ── */
+        .navbar {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            border-bottom: 1px solid var(--g-border);
+            position: sticky;
+            top: 0;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        .nav-logo-icon {
+            width: 32px; height: 32px;
+            background: var(--g-blue);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 14px;
+        }
+        .nav-logo-text {
+            font-family: 'Google Sans', 'Roboto', sans-serif;
+            font-size: 1.35rem; font-weight: 500;
+            color: var(--g-dark);
+            letter-spacing: -0.3px;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .nav-link {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--g-gray);
+            transition: var(--t);
+        }
+        .nav-link:hover { background: var(--g-light); color: var(--g-dark); }
+        .nav-actions { display: flex; align-items: center; gap: 8px; }
+        .btn-ghost {
+            padding: 9px 24px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--g-blue);
+            transition: var(--t);
+            display: inline-flex; align-items: center;
+        }
+        .btn-ghost:hover { background: var(--g-blue-l); }
+        .btn-filled {
+            padding: 9px 24px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: white;
+            background: var(--g-blue);
+            box-shadow: 0 1px 3px rgba(26,115,232,0.3);
+            transition: var(--t);
+            display: inline-flex; align-items: center;
+        }
+        .btn-filled:hover { background: var(--g-blue-d); box-shadow: 0 2px 8px rgba(26,115,232,0.35); }
+
+        /* ── HERO ── */
+        .hero {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: center;
+            gap: 60px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 80px 40px 96px;
+        }
+        .hero-left { }
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--g-blue);
+            background: var(--g-blue-l);
+            padding: 6px 14px;
+            border-radius: 20px;
+            margin-bottom: 24px;
+        }
+        .hero-title {
+            font-family: 'Google Sans', 'Roboto', sans-serif;
+            font-size: 3.8rem;
+            font-weight: 400;
+            line-height: 1.1;
+            color: var(--g-dark);
+            margin-bottom: 24px;
+            letter-spacing: -1px;
+        }
+        .hero-title .accent { color: var(--g-blue); font-weight: 700; }
+        .hero-subtitle {
+            font-size: 1.1rem;
+            color: var(--g-gray);
+            line-height: 1.75;
+            margin-bottom: 40px;
+        }
+        .hero-cta { display: flex; gap: 16px; flex-wrap: wrap; }
+        .btn-hero-primary {
+            padding: 14px 32px;
+            background: var(--g-blue);
+            color: white;
+            border-radius: 4px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: 0 2px 6px rgba(26,115,232,0.4);
+            transition: var(--t);
+        }
+        .btn-hero-primary:hover { background: var(--g-blue-d); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,115,232,0.4); }
+        .btn-hero-outline {
+            padding: 13px 28px;
+            background: white;
+            color: var(--g-blue);
+            border: 1px solid var(--g-border);
+            border-radius: 4px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: inline-flex; align-items: center; gap: 8px;
+            transition: var(--t);
+        }
+        .btn-hero-outline:hover { background: var(--g-light); border-color: #bbb; }
+
+        /* Hero Right — Visual Card */
+        .hero-visual {
+            background: var(--g-light);
+            border-radius: 16px;
+            border: 1px solid var(--g-border);
+            padding: 28px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.07);
+            animation: floatUpDown 6s ease-in-out infinite;
+        }
+        @keyframes floatUpDown {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-12px); box-shadow: 0 12px 40px rgba(0,0,0,0.1); }
+            100% { transform: translateY(0px); }
+        }
+        .visual-bar {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 20px;
+        }
+        .visual-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .visual-dot.red { background: #ff5f57; }
+        .visual-dot.yellow { background: #febc2e; }
+        .visual-dot.green { background: #28c840; }
+        .visual-title {
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: var(--g-gray);
+            margin-left: auto;
+        }
+        .visual-mic-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 0 16px;
+            gap: 12px;
+        }
+        .visual-mic-ring {
+            width: 90px; height: 90px;
+            border-radius: 50%;
+            background: var(--g-blue-l);
+            display: flex; align-items: center; justify-content: center;
+            animation: micBreath 3s ease-in-out infinite;
+        }
+        .visual-mic-btn {
+            width: 70px; height: 70px;
+            border-radius: 50%;
+            background: var(--g-blue);
+            color: white;
+            font-size: 1.6rem;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 6px 20px rgba(26,115,232,0.4);
+        }
+        @keyframes micBreath {
+            0%,100% { box-shadow: 0 0 0 0 rgba(26,115,232,0.2); }
+            50% { box-shadow: 0 0 0 14px rgba(26,115,232,0); }
+        }
+        .visual-hint { font-size: 0.82rem; color: var(--g-gray); font-weight: 500; }
+        .visual-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+        .visual-chip {
+            padding: 6px 14px;
+            background: white;
+            border: 1px solid var(--g-border);
+            border-radius: 20px;
+            font-size: 0.78rem;
+            color: var(--g-gray);
+            font-weight: 500;
+        }
+        .visual-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+            border-top: 1px solid var(--g-border);
+            padding-top: 20px;
+        }
+        .visual-stat {
+            text-align: center;
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid var(--g-border);
+        }
+        .visual-stat-num { font-size: 1.4rem; font-weight: 700; color: var(--g-blue); }
+        .visual-stat-label { font-size: 0.68rem; color: var(--g-gray); margin-top: 2px; }
+
+        /* ── ANIMATED TRUCK ── */
+        .truck-lane {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 60px;
+            pointer-events: none;
+            overflow: hidden;
+            border-bottom: 2px dashed rgba(26, 115, 232, 0.15);
+            z-index: 10;
+        }
+        .animated-truck {
+            position: absolute;
+            bottom: 12px;
+            left: -80px;
+            font-size: 2rem;
+            color: var(--g-blue);
+            animation: driveTruck 14s linear infinite;
+        }
+        .animated-truck::after {
+            content: '';
+            position: absolute;
+            right: -18px; top: 18px;
+            width: 12px; height: 3px;
+            background: rgba(26, 115, 232, 0.4);
+            border-radius: 4px;
+            box-shadow: 16px 0 0 rgba(26, 115, 232, 0.2), 32px 0 0 rgba(26, 115, 232, 0.1);
+            animation: exhaust 0.4s linear infinite;
+        }
+        @keyframes driveTruck {
+            0% { transform: translateX(-100px); }
+            100% { transform: translateX(110vw); }
+        }
+        @keyframes exhaust {
+            0% { transform: translateX(0); opacity: 1; }
+            100% { transform: translateX(-15px); opacity: 0; }
+        }
+
+        /* ── FEATURES ── */
+        .features {
+            background: var(--g-light);
+            padding: 80px 40px;
+            border-top: 1px solid var(--g-border);
+        }
+        .section-label {
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--g-blue);
+            margin-bottom: 12px;
+        }
+        .section-title {
+            text-align: center;
+            font-family: 'Google Sans', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 400;
+            color: var(--g-dark);
+            margin-bottom: 60px;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .feature-card {
+            background: white;
+            border-radius: 8px;
+            padding: 32px;
+            border: 1px solid var(--g-border);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .feature-card:hover { 
+            box-shadow: 0 16px 40px rgba(0,0,0,0.08); 
+            transform: translateY(-8px); 
+        }
+        .feature-icon {
+            width: 52px; height: 52px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+        }
+        .feature-icon.blue   { background: var(--g-blue-l); color: var(--g-blue); }
+        .feature-icon.green  { background: #e6f4ea; color: var(--g-green); }
+        .feature-icon.yellow { background: #fef7e0; color: var(--g-yellow); }
+        .feature-icon.red    { background: #fce8e6; color: var(--g-red); }
+        .feature-icon.purple { background: #ede7f6; color: var(--g-purple); }
+        .feature-icon.teal   { background: #e0f2f1; color: var(--g-teal); }
+        .feature-title { font-size: 1.05rem; font-weight: 500; color: var(--g-dark); margin-bottom: 10px; }
+        .feature-text  { font-size: 0.875rem; color: var(--g-gray); line-height: 1.7; }
+
+        /* ── STATS ── */
+        .stats {
+            padding: 64px 40px;
+            background: white;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 32px;
+            max-width: 960px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .stat-item { }
+        .stat-number { font-size: 2.6rem; font-weight: 700; color: var(--g-blue); margin-bottom: 8px; line-height: 1; }
+        .stat-label  { font-size: 0.875rem; color: var(--g-gray); }
+
+        /* ── HOW IT WORKS ── */
+        .how {
+            background: var(--g-light);
+            padding: 80px 40px;
+            border-top: 1px solid var(--g-border);
+        }
+        .steps-row {
+            display: flex;
+            justify-content: center;
+            max-width: 960px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .steps-row::before {
+            content: '';
+            position: absolute;
+            top: 40px; left: 10%; right: 10%;
+            height: 2px;
+            background: var(--g-border);
+        }
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 0 20px;
+            position: relative;
+        }
+        .step-num {
+            width: 52px; height: 52px;
+            border-radius: 50%;
+            background: var(--g-blue);
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px;
+            position: relative; z-index: 1;
+            box-shadow: 0 4px 12px rgba(26,115,232,0.35);
+        }
+        .step-title { font-size: 0.95rem; font-weight: 500; color: var(--g-dark); margin-bottom: 8px; }
+        .step-text  { font-size: 0.82rem; color: var(--g-gray); line-height: 1.6; }
+
+        /* ── CTA BANNER ── */
+        .cta-banner {
+            background: var(--g-blue);
+            padding: 80px 40px;
+            text-align: center;
+        }
+        .cta-banner h2 { font-family: 'Google Sans', sans-serif; font-size: 2.2rem; font-weight: 400; color: white; margin-bottom: 16px; }
+        .cta-banner p  { font-size: 1rem; color: rgba(255,255,255,0.8); margin-bottom: 36px; }
+        .btn-cta-white {
+            padding: 14px 36px;
+            background: white;
+            color: var(--g-blue);
+            border-radius: 4px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: var(--t);
+        }
+        .btn-cta-white:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+
+        /* ── FOOTER ── */
+        footer {
+            background: #202124;
+            padding: 40px;
+            color: rgba(255,255,255,0.55);
+            font-size: 0.85rem;
+        }
+        .footer-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .footer-logo {
+            display: flex; align-items: center; gap: 8px;
+            text-decoration: none;
+            color: white;
+        }
+        .footer-logo-icon {
+            width: 28px; height: 28px;
+            background: var(--g-blue);
+            border-radius: 7px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 12px;
+        }
+        .footer-logo-text { font-size: 1rem; font-weight: 500; }
+        .footer-links { display: flex; gap: 24px; flex-wrap: wrap; }
+        .footer-links a {
+            color: rgba(255,255,255,0.55);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.15s;
+        }
+        .footer-links a:hover { color: white; }
+        .footer-copy { color: rgba(255,255,255,0.4); }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+            .hero { grid-template-columns: 1fr; padding: 60px 24px; }
+            .hero-visual { display: none; }
+            .hero-title { font-size: 2.8rem; }
+            .features-grid { grid-template-columns: 1fr 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .steps-row { flex-direction: column; align-items: center; gap: 32px; }
+            .steps-row::before { display: none; }
+            .navbar { padding: 0 24px; }
+            .nav-links { display: none; }
+        }
+        @media (max-width: 600px) {
+            .features-grid { grid-template-columns: 1fr; }
+            .hero-title { font-size: 2.2rem; }
+            .features, .how, .stats, .cta-banner { padding: 60px 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+    <a href="/" class="nav-logo">
+        <div class="nav-logo-icon"><i class="fas fa-truck-moving"></i></div>
+        <span class="nav-logo-text">VoiceLog</span>
+    </a>
+    <div class="nav-links">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#how" class="nav-link">How it works</a>
+    </div>
+    <div class="nav-actions">
+        <a href="/login" class="btn-ghost">Sign in</a>
+        <a href="/login" class="btn-filled">Get started</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section style="position: relative; overflow: hidden; padding-bottom: 20px;">
+    <div class="hero">
+        <div class="hero-left">
+            <div class="hero-eyebrow">
+                <i class="fas fa-bolt"></i> AI-Powered Logistics Platform
+            </div>
+            <h1 class="hero-title">
+                Logistics,<br><span class="accent">powered</span> by voice.
+            </h1>
+            <p class="hero-subtitle">
+                VoiceLog helps drivers and administrators manage deliveries seamlessly using AI voice recognition, biometric security, and real-time Firebase tracking.
+            </p>
+            <div class="hero-cta">
+                <a href="/login" class="btn-hero-primary">
+                    <i class="fas fa-right-to-bracket"></i> Get started — it's free
+                </a>
+                <a href="#features" class="btn-hero-outline">
+                    <i class="fas fa-circle-info"></i> Learn more
+                </a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="visual-bar">
+                <div class="visual-dot red"></div>
+                <div class="visual-dot yellow"></div>
+                <div class="visual-dot green"></div>
+                <span class="visual-title">VoiceLog — AI Voice Assistant</span>
+            </div>
+            <div class="visual-mic-zone">
+                <div class="visual-mic-ring">
+                    <div class="visual-mic-btn"><i class="fas fa-microphone"></i></div>
+                </div>
+                <span class="visual-hint">Tap to speak</span>
+                <div class="visual-chips">
+                    <span class="visual-chip"><i class="fas fa-location-dot"></i> Track shipment 123</span>
+                    <span class="visual-chip"><i class="fas fa-circle-check"></i> Mark 124 delivered</span>
+                    <span class="visual-chip"><i class="fas fa-route"></i> Next stop?</span>
+                </div>
+            </div>
+            <div class="visual-stats">
+                <div class="visual-stat">
+                    <div class="visual-stat-num">5</div>
+                    <div class="visual-stat-label">Completed</div>
+                </div>
+                <div class="visual-stat">
+                    <div class="visual-stat-num">3</div>
+                    <div class="visual-stat-label">Pending</div>
+                </div>
+                <div class="visual-stat">
+                    <div class="visual-stat-num">8</div>
+                    <div class="visual-stat-label">Total</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Animated Truck Lane -->
+    <div class="truck-lane">
+        <div class="animated-truck"><i class="fas fa-truck-fast"></i></div>
+    </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+    <p class="section-label">Core Features</p>
+    <h2 class="section-title">Everything you need to run deliveries smarter</h2>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon blue"><i class="fas fa-microphone"></i></div>
+            <h3 class="feature-title">Hands-free control</h3>
+            <p class="feature-text">Drivers can update shipment statuses, check ETAs, and request navigation purely through voice commands, ensuring safety on the road.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon green"><i class="fas fa-shield-halved"></i></div>
+            <h3 class="feature-title">Biometric security</h3>
+            <p class="feature-text">Powered by SpeechBrain's ECAPA-TDNN model, our AI verifies the driver's unique voice profile before confirming critical delivery updates.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon yellow"><i class="fas fa-chart-line"></i></div>
+            <h3 class="feature-title">Real-time oversight</h3>
+            <p class="feature-text">Administrators get a bird's-eye view of all active drivers, deliveries, and AI interactions from a centralized, live-updating dashboard.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon red"><i class="fas fa-map-location-dot"></i></div>
+            <h3 class="feature-title">Live GPS tracking</h3>
+            <p class="feature-text">Track every driver's real-time location on an interactive Leaflet map. Monitor route adherence and ETA accuracy for each shipment.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon purple"><i class="fas fa-robot"></i></div>
+            <h3 class="feature-title">AI intent recognition</h3>
+            <p class="feature-text">Natural language commands are understood and executed automatically. Six built-in intents cover every common logistics scenario.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon teal"><i class="fas fa-bell"></i></div>
+            <h3 class="feature-title">Instant notifications</h3>
+            <p class="feature-text">Admins can push real-time alerts directly to individual drivers. Changes sync instantly via Firebase without needing a page refresh.</p>
+        </div>
+    </div>
+</section>
+
+<!-- STATS -->
+<section class="stats">
+    <div class="stats-grid">
+        <div class="stat-item">
+            <div class="stat-number">6+</div>
+            <div class="stat-label">Voice AI Intents Supported</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">Live</div>
+            <div class="stat-label">Firebase Real-time Sync</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">2</div>
+            <div class="stat-label">Role-based Portals</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">100%</div>
+            <div class="stat-label">Hands-free Capable</div>
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+    <p class="section-label">How it works</p>
+    <h2 class="section-title">Simple. Smart. Seamless.</h2>
+    <div class="steps-row">
+        <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-title">Sign in</div>
+            <div class="step-text">Login as a Driver or Admin with secure Firebase authentication.</div>
+        </div>
+        <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-title">Speak a command</div>
+            <div class="step-text">Tap the mic and say "Mark shipment delivered" or "What's my next stop?"</div>
+        </div>
+        <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-title">AI understands</div>
+            <div class="step-text">The NLP engine classifies the intent and executes the action instantly.</div>
+        </div>
+        <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-title">Dashboard updates</div>
+            <div class="step-text">Firebase syncs all changes live so admins see every update in real time.</div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA BANNER -->
+<section class="cta-banner">
+    <h2>Ready to modernize your logistics operations?</h2>
+    <p>Join VoiceLog and let AI handle the complexity.</p>
+    <a href="/login" class="btn-cta-white">
+        <i class="fas fa-arrow-right"></i> Start for free
+    </a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-inner">
+        <a href="/" class="footer-logo">
+            <div class="footer-logo-icon"><i class="fas fa-truck-moving"></i></div>
+            <span class="footer-logo-text">VoiceLog</span>
+        </a>
+        <div class="footer-links">
+            <a href="#features">Features</a>
+            <a href="#how">How it works</a>
+            <a href="/login">Sign In</a>
+            <a href="/login">Get Started</a>
+        </div>
+        <span class="footer-copy">© 2026 VoiceLog. Enterprise Logistics System.</span>
+    </div>
+</footer>
+
+</body>
+</html>

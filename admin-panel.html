@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceLog — Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary:#0D6EFD; --primary-light:#E7F0FF; --primary-dark:#0a58ca;
+            --success:#1DB954; --success-light:#E6F9EE;
+            --warning:#F59E0B; --warning-light:#FFF8E7;
+            --danger:#EF4444; --danger-light:#FEF2F2;
+            --text:#1E2329; --muted:#6B7280;
+            --border:#E5E7EB; --bg:#F4F6F9; --white:#FFFFFF;
+            --sidebar-w:240px; --radius:14px;
+            --shadow:0 1px 4px rgba(0,0,0,0.07),0 4px 20px rgba(0,0,0,0.04);
+        }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+        
+        .app{display:flex;min-height:100vh}
+
+        /* SIDEBAR */
+        .sidebar{width:var(--sidebar-w);background:var(--white);border-right:1px solid var(--border);padding:20px 12px;position:fixed;top:0;bottom:0;display:flex;flex-direction:column;z-index:100}
+        .logo{display:flex;align-items:center;gap:10px;padding:4px 8px;margin-bottom:28px}
+        .logo-icon{width:36px;height:36px;background:var(--primary);border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-size:16px}
+        .logo-text{font-size:1.2rem;font-weight:800}
+        .logo-badge{font-size:0.65rem;background:var(--danger);color:white;padding:2px 7px;border-radius:10px;margin-left:4px;font-weight:700}
+        .nav-links{list-style:none;display:flex;flex-direction:column;gap:4px}
+        .nav-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:9px;color:var(--muted);font-size:0.9rem;font-weight:500;cursor:pointer;transition:all 0.2s}
+        .nav-item i{font-size:1.1rem;width:20px;text-align:center}
+        .nav-item:hover{background:var(--bg);color:var(--text)}
+        .nav-item.active{background:var(--primary-light);color:var(--primary);font-weight:600}
+        .sidebar-footer{margin-top:auto;padding-top:16px;border-top:1px solid var(--border)}
+        .user-pill{display:flex;align-items:center;gap:10px;padding:8px;border-radius:9px}
+        .user-pill img{width:36px;height:36px;border-radius:50%}
+        .user-pill-name{font-size:0.85rem;font-weight:600}
+        .user-pill-role{font-size:0.73rem;color:var(--muted)}
+        .logout-btn{width:100%;margin-top:8px;padding:9px;border:1px solid var(--border);border-radius:9px;font-size:0.83rem;color:var(--danger);font-weight:600;cursor:pointer;background:none;transition:all 0.2s}
+        .logout-btn:hover{background:var(--danger-light)}
+
+        /* MAIN */
+        .main{flex:1;margin-left:var(--sidebar-w);display:flex;flex-direction:column}
+        .top-bar{height:64px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:90}
+        .top-bar h1{font-size:1.1rem;font-weight:700}
+        .top-bar-right{display:flex;align-items:center;gap:12px}
+        .driver-count{font-size:0.8rem;color:var(--muted);background:var(--bg);padding:6px 14px;border-radius:20px;border:1px solid var(--border)}
+
+        /* PAGES */
+        .pages{padding:24px;flex:1}
+        .page{display:none;animation:fadeIn 0.2s ease}
+        .page.active{display:block}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)}}
+
+        /* CARDS */
+        .card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);padding:20px;margin-bottom:20px}
+        .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+        .card-header h2{font-size:0.95rem;font-weight:700}
+
+        /* KPI STRIP */
+        .kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+        .kpi{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);padding:16px 20px;display:flex;align-items:center;gap:14px}
+        .kpi-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+        .kpi-icon.blue{background:var(--primary-light);color:var(--primary)}
+        .kpi-icon.green{background:var(--success-light);color:var(--success)}
+        .kpi-icon.orange{background:var(--warning-light);color:var(--warning)}
+        .kpi-icon.red{background:var(--danger-light);color:var(--danger)}
+        .kpi-num{font-size:1.8rem;font-weight:800;line-height:1}
+        .kpi-label{font-size:0.76rem;color:var(--muted);margin-top:3px}
+
+        /* TABLE */
+        .table-wrap{overflow-x:auto}
+        table{width:100%;border-collapse:collapse;font-size:0.875rem}
+        thead th{text-align:left;padding:10px 14px;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);border-bottom:1px solid var(--border)}
+        tbody tr{border-bottom:1px solid var(--border);transition:background 0.15s}
+        tbody tr:hover{background:var(--bg)}
+        tbody td{padding:12px 14px;vertical-align:middle}
+        
+        .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.73rem;font-weight:600}
+        .badge.pending{background:var(--warning-light);color:var(--warning)}
+        .badge.in-progress{background:var(--primary-light);color:var(--primary)}
+        .badge.delivered{background:var(--success-light);color:var(--success)}
+
+        /* FORM */
+        .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+        .form-group{display:flex;flex-direction:column;gap:6px}
+        .form-group.full{grid-column:1/-1}
+        label{font-size:0.8rem;font-weight:600;color:var(--muted)}
+        .form-input{padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:0.875rem;color:var(--text);outline:none;transition:all 0.2s;background:var(--bg);font-family:inherit}
+        .form-input:focus{border-color:var(--primary);background:white;box-shadow:0 0 0 3px rgba(13,110,253,0.1)}
+        .btn-primary{padding:10px 22px;background:var(--primary);color:white;border:none;border-radius:9px;font-size:0.875rem;font-weight:700;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px}
+        .btn-primary:hover{background:var(--primary-dark)}
+        .btn-sm{padding:6px 14px;border-radius:7px;font-size:0.78rem;font-weight:600;cursor:pointer;border:none;transition:all 0.2s}
+        .btn-danger{background:var(--danger-light);color:var(--danger)}
+        .btn-danger:hover{background:var(--danger);color:white}
+        .btn-success{background:var(--success-light);color:var(--success)}
+        .btn-success:hover{background:var(--success);color:white}
+
+        /* TOAST */
+        .toast{position:fixed;bottom:24px;right:24px;background:#1E2329;color:white;padding:12px 20px;border-radius:10px;font-size:0.875rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.2);transform:translateY(80px);opacity:0;transition:all 0.3s;z-index:9999;display:flex;align-items:center;gap:10px}
+        .toast.show{transform:translateY(0);opacity:1}
+        .toast.success{background:#065F46;border-left:4px solid var(--success)}
+        .toast.error{background:#7F1D1D;border-left:4px solid var(--danger)}
+    </style>
+</head>
+<body>
+<div class="app">
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"><i class="fas fa-truck-moving"></i></div>
+            <span class="logo-text">VoiceLog</span>
+            <span class="logo-badge">ADMIN</span>
+        </div>
+        <ul class="nav-links">
+            <li class="nav-item active" data-page="dashboard"><i class="fas fa-grid-2"></i><span>Dashboard</span></li>
+            <li class="nav-item" data-page="add-shipment"><i class="fas fa-plus-circle"></i><span>Add Shipment</span></li>
+            <li class="nav-item" data-page="notify"><i class="fas fa-bell"></i><span>Notify Driver</span></li>
+            <li class="nav-item" data-page="shipments"><i class="fas fa-boxes-stacked"></i><span>All Shipments</span></li>
+            <li class="nav-item" data-page="drivers"><i class="fas fa-users"></i><span>Drivers</span></li>
+        </ul>
+        <div class="sidebar-footer">
+            <div class="user-pill">
+                <img src="https://ui-avatars.com/api/?name=Admin&background=0D6EFD&color=fff" alt="Admin">
+                <div>
+                    <div class="user-pill-name" id="admin-name">Admin User</div>
+                    <div class="user-pill-role">Administrator</div>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="doLogout()"><i class="fas fa-right-from-bracket"></i> Logout</button>
+        </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="main">
+        <header class="top-bar">
+            <h1 id="page-heading">Dashboard</h1>
+            <div class="top-bar-right">
+                <span class="driver-count"><i class="fas fa-circle text-success"></i> <span id="active-drivers">0</span> Drivers Active</span>
+                <div class="icon-btn" onclick="doLogout()" title="Logout" style="color:var(--danger); font-size:1.1rem; cursor:pointer; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center; border: 1px solid var(--border); margin-left:8px;">
+                    <i class="fas fa-right-from-bracket"></i>
+                </div>
+            </div>
+        </header>
+
+        <div class="pages">
+            <!-- DASHBOARD PAGE -->
+            <div class="page active" id="page-dashboard">
+                <div class="kpi-strip">
+                    <div class="kpi">
+                        <div class="kpi-icon blue"><i class="fas fa-boxes-stacked"></i></div>
+                        <div><div class="kpi-num" id="kpi-total">0</div><div class="kpi-label">Total Shipments</div></div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi-icon green"><i class="fas fa-circle-check"></i></div>
+                        <div><div class="kpi-num" id="kpi-delivered">0</div><div class="kpi-label">Delivered</div></div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi-icon orange"><i class="fas fa-hourglass-half"></i></div>
+                        <div><div class="kpi-num" id="kpi-pending">0</div><div class="kpi-label">Pending</div></div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi-icon red"><i class="fas fa-truck-fast"></i></div>
+                        <div><div class="kpi-num" id="kpi-inprogress">0</div><div class="kpi-label">In Progress</div></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Recent Shipments</h2>
+                        <button class="btn-primary btn-sm" onclick="goPage('add-shipment')">
+                            <i class="fas fa-plus"></i> Add New
+                        </button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Shipment ID</th><th>Address</th><th>ETA</th><th>Status</th><th>Driver</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody id="shipments-table-body">
+                                <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Loading shipments...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:20px">
+                    <div class="card-header">
+                        <h2><i class="fas fa-history text-primary"></i> Delivery Activity Log</h2>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Time</th><th>Driver UID</th><th>Shipment</th><th>Status Update</th><th>Event Type</th></tr>
+                            </thead>
+                            <tbody id="audit-log-body">
+                                <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">No activity yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADD SHIPMENT PAGE -->
+            <div class="page" id="page-add-shipment">
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-plus-circle text-primary"></i> Add New Shipment</h2>
+                    </div>
+                    <form id="add-shipment-form" onsubmit="return false;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Shipment ID</label>
+                                <input type="text" class="form-input" id="ship-id" placeholder="e.g. 126" required>
+                            </div>
+                            <div class="form-group">
+                                <label>ETA</label>
+                                <input type="text" class="form-input" id="ship-eta" placeholder="e.g. 4:30 PM" required>
+                            </div>
+                            <div class="form-group full">
+                                <label>Select Location (Autofill)</label>
+                                <select class="form-input" id="ship-predefined" onchange="autoFillLocation()">
+                                    <option value="">-- Manual Entry --</option>
+                                    <option value="chennai_central">Chennai Central Railway Station</option>
+                                    <option value="marina_beach">Marina Beach, Chennai</option>
+                                    <option value="itc_grand">ITC Grand Chola, Guindy</option>
+                                    <option value="tidel_park">TIDEL Park, Taramani</option>
+                                    <option value="airport">Chennai International Airport</option>
+                                </select>
+                            </div>
+                            <div class="form-group full">
+                                <label>Delivery Address</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input type="text" class="form-input" id="ship-address" placeholder="Full delivery address" style="flex:1" required>
+                                    <button type="button" class="btn-primary" onclick="searchAddress()" style="width: auto; padding: 0 16px;">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Latitude</label>
+                                <input type="number" step="any" class="form-input" id="ship-lat" placeholder="e.g. 13.0827" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Longitude</label>
+                                <input type="number" step="any" class="form-input" id="ship-lng" placeholder="e.g. 80.2707" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Assign to Driver</label>
+                                <select class="form-input" id="ship-driver">
+                                    <option value="">Loading drivers...</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="opacity: 0.6; pointer-events: none;">
+                                <label>Initial Status</label>
+                                <input type="text" class="form-input" id="ship-status" value="Pending" readonly>
+                            </div>
+                            <div class="form-group full">
+                                <label>Notes (optional)</label>
+                                <input type="text" class="form-input" id="ship-notes" placeholder="e.g. Call before delivery, fragile package">
+                            </div>
+                        </div>
+                        <br>
+                        <button type="submit" class="btn-primary" onclick="addShipment()">
+                            <i class="fas fa-paper-plane"></i> Assign Shipment to Driver
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- NOTIFY DRIVER PAGE -->
+            <div class="page" id="page-notify">
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-bell text-warning"></i> Send Notification</h2>
+                    </div>
+                    <form id="notify-form" onsubmit="return false;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Select Driver</label>
+                                <select class="form-input" id="notify-driver-select">
+                                    <option value="">Loading drivers...</option>
+                                </select>
+                            </div>
+                            <div class="form-group full">
+                                <label>Message</label>
+                                <input type="text" class="form-input" id="notify-msg" placeholder="e.g. Please pick up shipment 150 next." required>
+                            </div>
+                        </div>
+                        <br>
+                        <button type="submit" class="btn-primary" onclick="sendAdminNotification()">
+                            <i class="fas fa-paper-plane"></i> Push Notification to Driver
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ALL SHIPMENTS PAGE -->
+            <div class="page" id="page-shipments">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>All Shipments</h2>
+                        <input type="text" class="form-input" id="ship-search" placeholder="Search..." style="width:220px;padding:7px 12px" oninput="filterTable()">
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Shipment ID</th><th>Address</th><th>ETA</th><th>Status</th><th>Driver</th><th>Notes</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody id="all-shipments-body">
+                                <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DRIVERS PAGE -->
+            <div class="page" id="page-drivers">
+                <div class="card">
+                    <div class="card-header"><h2>Registered Drivers</h2></div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Driver Name</th><th>Email</th><th>Status</th><th>Completed</th><th>Pending</th></tr>
+                            </thead>
+                            <tbody id="drivers-table-body">
+                                <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dashboard Animated Truck -->
+        <div class="dashboard-truck-lane">
+            <div class="animated-truck"><i class="fas fa-truck-fast"></i></div>
+        </div>
+    </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getDatabase, ref, set, get, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+// ─── PASTE YOUR FIREBASE CONFIG FROM STEP 8 HERE ───
+const firebaseConfig = {
+  apiKey: "AIzaSyBSZOsj77aGHTpQIyyMl6QEUrZd63d5HiQ",
+  authDomain: "voicelog-app-974a1.firebaseapp.com",
+  databaseURL: "https://voicelog-app-974a1-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "voicelog-app-974a1",
+  storageBucket: "voicelog-app-974a1.firebasestorage.app",
+  messagingSenderId: "222162056235",
+  appId: "1:222162056235:web:3bcb69582fab3201ea266e",
+  measurementId: "G-D3FE5VKVR9"
+};
+// ────────────────────────────────────────────────────
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+let allShipments = {};
+let allDrivers   = {};
+
+// ── AUTH GUARD ──
+onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = '/login'; return; }
+
+    const snap = await get(ref(db, `users/${user.uid}`));
+    const userData = snap.val();
+    if (!userData || userData.role !== 'admin') {
+        window.location.href = '/'; // Redirect non-admins
+        return;
+    }
+    document.getElementById('admin-name').textContent = userData.name || user.email;
+    loadAll();
+});
+
+// ── NAV ──
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => goPage(item.dataset.page));
+});
+
+window.goPage = function(page) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
+    document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${page}`));
+    const headings = { dashboard:'Dashboard', 'add-shipment':'Add New Shipment', shipments:'All Shipments', drivers:'Drivers' };
+    document.getElementById('page-heading').textContent = headings[page] || page;
+    if (page === 'add-shipment') populateDriverSelect();
+};
+
+// ── LOAD DATA ──
+function loadAll() {
+    // Listen to shipments in real-time
+    onValue(ref(db, 'shipments'), (snap) => {
+        allShipments = snap.val() || {};
+        renderShipmentsTable();
+        renderAllShipmentsTable();
+        updateKPIs();
+    }, (error) => {
+        console.error("Firebase Read Error (shipments):", error);
+        if (error.message.includes('permission_denied')) {
+            showToast('Permission Denied reading shipments. Update your Rules!', 'error');
+        }
+    });
+
+    // Listen to audit/delivery logs in real-time
+    onValue(ref(db, 'audit_logs'), (snap) => {
+        const logs = snap.val() || {};
+        renderAuditLog(logs);
+    });
+
+    // Listen to users/drivers + update badges
+    onValue(ref(db, 'users'), (snap) => {
+        const users = snap.val() || {};
+        allDrivers = Object.entries(users)
+            .filter(([,u]) => u.role === 'driver')
+            .reduce((acc, [uid, u]) => { acc[uid] = u; return acc; }, {});
+        document.getElementById('active-drivers').textContent = Object.keys(allDrivers).length;
+        renderDriversTable();
+    }, (error) => {
+        console.error("Firebase Read Error (users):", error);
+        if (error.message.includes('permission_denied')) {
+            showToast('Permission Denied reading users list. Update your Rules!', 'error');
+        }
+    });
+}
+
+function updateKPIs() {
+    const ships = Object.values(allShipments);
+    document.getElementById('kpi-total').textContent      = ships.length;
+    document.getElementById('kpi-delivered').textContent  = ships.filter(s => s.status === 'Delivered').length;
+    document.getElementById('kpi-pending').textContent    = ships.filter(s => s.status === 'Pending').length;
+    document.getElementById('kpi-inprogress').textContent = ships.filter(s => ['Picked Up', 'In Transit', 'In Progress'].includes(s.status)).length;
+}
+
+// ── SHIPMENT TABLE ──
+function getDriverName(uid) {
+    return allDrivers[uid]?.name || uid || '—';
+}
+
+function renderShipmentsTable() {
+    const tbody = document.getElementById('shipments-table-body');
+    const ships = Object.entries(allShipments).slice(-10).reverse();
+    if (!ships.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No shipments yet. Add one!</td></tr>'; return; }
+    tbody.innerHTML = ships.map(([id, s]) => `
+        <tr>
+            <td><b>Shipment ${id}</b></td>
+            <td>${s.address || '—'}</td>
+            <td>${s.eta || '—'}</td>
+            <td><span class="badge ${statusClass(s.status)}">${s.status}</span></td>
+            <td>${getDriverName(s.driverUid)}</td>
+            <td>
+                <button class="btn-sm btn-success" onclick="window._markDelivered('${id}')">Mark Delivered</button>
+                <button class="btn-sm btn-danger" onclick="window._deleteShipment('${id}','${s.driverUid}')">Delete</button>
+            </td>
+        </tr>`
+    ).join('');
+}
+
+function renderAllShipmentsTable() {
+    const tbody = document.getElementById('all-shipments-body');
+    const ships = Object.entries(allShipments);
+    if (!ships.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">No shipments.</td></tr>'; return; }
+    tbody.innerHTML = ships.map(([id, s]) => `
+        <tr>
+            <td><b>Shipment ${id}</b></td>
+            <td>${s.address || '—'}</td>
+            <td>${s.eta || '—'}</td>
+            <td><span class="badge ${statusClass(s.status)}">${s.status}</span></td>
+            <td>${getDriverName(s.driverUid)}</td>
+            <td>${s.notes || '—'}</td>
+            <td>
+                <button class="btn-sm btn-success" onclick="window._markDelivered('${id}')">✓ Done</button>
+                <button class="btn-sm btn-danger" onclick="window._deleteShipment('${id}','${s.driverUid}')">Delete</button>
+            </td>
+        </tr>`
+    ).join('');
+}
+
+function renderAuditLog(logs) {
+    const tbody = document.getElementById('audit-log-body');
+    if (!tbody) return;
+    
+    // Sort logs descending by timestamp
+    const sortedLogs = Object.values(logs).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    
+    if (!sortedLogs.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">No activity yet.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = sortedLogs.slice(0, 50).map(log => {
+        const timeStr = new Date(log.timestamp).toLocaleString(undefined, {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+        const statusBadge = log.details && log.details.newStatus 
+            ? `<span class="badge ${statusClass(log.details.newStatus)}">${log.details.newStatus}</span>` 
+            : '—';
+            
+        return `
+        <tr>
+            <td style="white-space:nowrap;font-size:0.8rem;color:var(--muted)">${timeStr}</td>
+            <td><b>${getDriverName(log.uid)}</b><br><span style="font-size:0.75rem;color:var(--muted)">${log.uid}</span></td>
+            <td>${log.details ? `Shipment ${log.details.shipmentId}` : '—'}</td>
+            <td>${statusBadge}</td>
+            <td>${log.action.replace(/_/g, ' ')}</td>
+        </tr>`;
+    }).join('');
+}
+
+function statusClass(s) {
+    if (s === 'Delivered') return 'delivered';
+    if (s === 'In Transit' || s === 'Picked Up' || s === 'In Progress') return 'in-progress';
+    return 'pending';
+}
+
+window.filterTable = function() {
+    const q = document.getElementById('ship-search').value.toLowerCase();
+    document.querySelectorAll('#all-shipments-body tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+};
+
+// ── DRIVERS TABLE ──
+const PREDEFINED_LOCATIONS = {
+    'chennai_central': { address: 'Chennai Central, Kannappar Thidal, Periyamet, Chennai', lat: 13.0827, lng: 80.2707 },
+    'marina_beach': { address: 'Marina Beach, Triplicane, Chennai', lat: 13.0489, lng: 80.2785 },
+    'itc_grand': { address: 'ITC Grand Chola, Guindy, Chennai', lat: 13.0102, lng: 80.2201 },
+    'tidel_park': { address: 'TIDEL Park, Tharamani, Chennai', lat: 12.9894, lng: 80.2484 },
+    'airport': { address: 'Chennai International Airport, Meenambakkam', lat: 12.9941, lng: 80.1709 }
+};
+
+window.autoFillLocation = function() {
+    const val = document.getElementById('ship-predefined').value;
+    if (!val) return;
+    const loc = PREDEFINED_LOCATIONS[val];
+    if (loc) {
+        document.getElementById('ship-address').value = loc.address;
+        document.getElementById('ship-lat').value = loc.lat;
+        document.getElementById('ship-lng').value = loc.lng;
+        showToast(`Autofilled: ${loc.address}`, 'success');
+    }
+}
+
+window.searchAddress = async function() {
+    const addr = document.getElementById('ship-address').value.trim();
+    if (!addr) { showToast('Please enter an address to search', 'warning'); return; }
+
+    const btn = document.querySelector('button[onclick="searchAddress()"]');
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+
+    try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`;
+        const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+        const data = await res.json();
+
+        if (data && data.length > 0) {
+            const result = data[0];
+            document.getElementById('ship-lat').value = result.lat;
+            document.getElementById('ship-lng').value = result.lon;
+            // Optionally update address to the standardized one
+            // document.getElementById('ship-address').value = result.display_name;
+            showToast('Coordinates found!', 'success');
+        } else {
+            showToast('Location not found. Try a more specific address.', 'error');
+        }
+    } catch (err) {
+        console.error('Geocoding error:', err);
+        showToast('Error searching for location', 'error');
+    } finally {
+        btn.innerHTML = oldHtml;
+        btn.disabled = false;
+    }
+}
+
+function renderDriversTable() {
+    const tbody = document.getElementById('drivers-table-body');
+    const drivers = Object.entries(allDrivers);
+    if (!drivers.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">No drivers registered.</td></tr>'; return; }
+    tbody.innerHTML = drivers.map(([uid, d]) => `
+        <tr>
+            <td><b>${d.name || '—'}</b></td>
+            <td>${d.email || '—'}</td>
+            <td><span class="badge in-progress">${d.status || 'Unknown'}</span></td>
+            <td>${d.completed || 0}</td>
+            <td>${d.pending || 0}</td>
+        </tr>`
+    ).join('');
+}
+
+// ── ADD SHIPMENT ──
+function populateDriverSelect() {
+    const sel = document.getElementById('ship-driver');
+    const notifySel = document.getElementById('notify-driver-select');
+    const drivers = Object.entries(allDrivers);
+    
+    if (drivers.length === 0) {
+        sel.innerHTML = '<option value="">(Waiting for drivers to log in...)</option>';
+        if(notifySel) notifySel.innerHTML = '<option value="">(Waiting for drivers...)</option>';
+        showToast('No drivers registered yet. Ask them to login at /login first!', 'error');
+    } else {
+        const opts = drivers.map(([uid, d]) => `<option value="${uid}">${d.name || d.email} (Driver)</option>`).join('');
+        sel.innerHTML = opts;
+        if(notifySel) notifySel.innerHTML = opts;
+    }
+}
+
+window.sendAdminNotification = async function() {
+    const driverUid = document.getElementById('notify-driver-select').value;
+    const message = document.getElementById('notify-msg').value.trim();
+    const btn = document.querySelector('#notify-form button[type="submit"]');
+
+    if (!driverUid || !message) {
+        showToast('Please select a driver and enter a message.', 'error');
+        return;
+    }
+
+    btn.disabled = true;
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+    try {
+        const token = window._VL_AUTH_TOKEN || localStorage.getItem('vl_token');
+        const res = await fetch('http://127.0.0.1:5000/api/admin/notify', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ driverUid, message })
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            showToast('Notification sent to driver successfully!', 'success');
+            document.getElementById('notify-msg').value = '';
+        } else {
+            showToast('Failed to send notification: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (err) {
+        showToast('Server error while sending notification.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+    }
+}
+
+window.addShipment = async function() {
+    const id      = document.getElementById('ship-id').value.trim();
+    const address = document.getElementById('ship-address').value.trim();
+    const eta     = document.getElementById('ship-eta').value.trim();
+    const lat     = parseFloat(document.getElementById('ship-lat').value);
+    const lng     = parseFloat(document.getElementById('ship-lng').value);
+    const driverUid = document.getElementById('ship-driver').value;
+    const status  = document.getElementById('ship-status').value;
+    const notes   = document.getElementById('ship-notes').value.trim();
+
+    if (!id || !address || !eta || !driverUid || isNaN(lat) || isNaN(lng)) {
+        showToast('Please fill all required fields', 'error');
+        return;
+    }
+
+    try {
+        // 1. Write to /shipments
+        await set(ref(db, `shipments/${id}`), { address, eta, status, notes, driverUid, latitude: lat, longitude: lng, createdAt: Date.now() });
+
+        // 2. Write to /tasks/{driverUid}
+        const taskRef = push(ref(db, `tasks/${driverUid}`));
+        await set(taskRef, { shipmentId: id, status, address, eta, latitude: lat, longitude: lng });
+
+        // 3. Update driver's pending count
+        const dSnap = await get(ref(db, `users/${driverUid}`));
+        const dData = dSnap.val() || {};
+        await update(ref(db, `users/${driverUid}`), { pending: (dData.pending || 0) + 1 });
+
+        showToast(`Shipment ${id} assigned to ${allDrivers[driverUid]?.name} ✓`, 'success');
+        document.getElementById('add-shipment-form').reset();
+        goPage('dashboard');
+
+    } catch (err) {
+        showToast(`Error: ${err.message}`, 'error');
+    }
+};
+
+// ── ACTIONS ──
+window._markDelivered = async function(shipId) {
+    await update(ref(db, `shipments/${shipId}`), { status: 'Delivered' });
+    showToast(`Shipment ${shipId} marked as Delivered`, 'success');
+};
+
+window._deleteShipment = async function(shipId, driverUid) {
+    if (!confirm(`Delete Shipment ${shipId}?`)) return;
+    await remove(ref(db, `shipments/${shipId}`));
+    if (driverUid) {
+        // Also remove from tasks
+        const snap = await get(ref(db, `tasks/${driverUid}`));
+        const tasks = snap.val() || {};
+        for (const [tid, t] of Object.entries(tasks)) {
+            if (t.shipmentId === shipId) {
+                await remove(ref(db, `tasks/${driverUid}/${tid}`));
+            }
+        }
+    }
+    showToast(`Shipment ${shipId} deleted`, 'success');
+};
+
+// ── LOGOUT ──
+window.doLogout = async function() {
+    await signOut(auth);
+    localStorage.clear();
+    window.location.href = '/login';
+};
+
+// ── TOAST ──
+let toastTimer;
+window.showToast = function(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.className = `toast ${type} show`;
+    t.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'xmark'}-circle"></i> ${msg}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+};
+</script>
+</body>
+</html>

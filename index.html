@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceLog — AI Logistics Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Firebase SDK for real-time driver updates -->
+    <script type="module">
+    import { initializeApp }        from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // ─── PASTE YOUR FIREBASE CONFIG FROM STEP 8 HERE ───
+    const firebaseConfig = {
+      apiKey: "AIzaSyBSZOsj77aGHTpQIyyMl6QEUrZd63d5HiQ",
+      authDomain: "voicelog-app-974a1.firebaseapp.com",
+      databaseURL: "https://voicelog-app-974a1-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "voicelog-app-974a1",
+      storageBucket: "voicelog-app-974a1.firebasestorage.app",
+      messagingSenderId: "222162056235",
+      appId: "1:222162056235:web:3bcb69582fab3201ea266e",
+      measurementId: "G-D3FE5VKVR9"
+    };
+    // ────────────────────────────────────────────────────
+
+    // Set to true once you have Firebase credentials
+    const FIREBASE_ENABLED = true;
+
+    if (FIREBASE_ENABLED) {
+        const fbApp = initializeApp(firebaseConfig);
+        const fbAuth  = getAuth(fbApp);
+        const fbDB    = getDatabase(fbApp);
+
+        onAuthStateChanged(fbAuth, (user) => {
+            if (!user) {
+                window.location.href = '/login';
+                return;
+            }
+            const uid = user.uid;
+            localStorage.setItem('vl_uid', uid);
+
+            // Make token available for API calls
+            user.getIdToken().then(token => {
+                window._VL_AUTH_TOKEN = token;
+                if (typeof window.fetchAll === 'function') {
+                    window.fetchAll();
+                } else if (typeof fetchAll === 'function') {
+                    fetchAll();
+                }
+            });
+
+            // ─── REAL-TIME LISTENER: tasks update instantly when admin assigns ───
+            onValue(ref(fbDB, `tasks/${uid}`), (snap) => {
+                const tasks = snap.val() || {};
+                // Push to app.js via global event
+                window.dispatchEvent(new CustomEvent('vl-tasks-update', { detail: tasks }));
+            });
+
+            // ─── REAL-TIME LISTENER: driver status ───
+            onValue(ref(fbDB, `users/${uid}`), (snap) => {
+                const data = snap.val() || {};
+                window.dispatchEvent(new CustomEvent('vl-driver-update', { detail: data }));
+            });
+
+            // ─── REAL-TIME LISTENER: driver notifications ───
+            let notifInitialized = false;
+            onValue(ref(fbDB, `notifications/${uid}`), (snap) => {
+                const notifs = snap.val() || {};
+                
+                // 1. Send full list to trigger UI update
+                window.dispatchEvent(new CustomEvent('vl-notifications-list', { detail: notifs }));
+
+                // 2. Trigger toast for *new* unread ones ONLY if not initial load
+                if (!notifInitialized) { notifInitialized = true; return; }
+                Object.entries(notifs).forEach(([id, n]) => {
+                    if (!n.read) {
+                        window.dispatchEvent(new CustomEvent('vl-notification', { detail: { id, ...n } }));
+                    }
+                });
+            });
+
+            window._VL_CLEAR_NOTIFS = () => {
+                remove(ref(fbDB, `notifications/${uid}`));
+            };
+
+            window._VL_LOGOUT = () => {
+                signOut(fbAuth).then(() => {
+                    localStorage.clear();
+                    window.location.href = '/login';
+                });
+            };
+        });
+    }
+    </script>
+
+</head>
+<body>
+<div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar" id="sidebar">
+        <div class="logo">
+            <div class="logo-icon"><i class="fas fa-truck-moving"></i></div>
+            <span class="logo-text">VoiceLog</span>
+        </div>
+        <ul class="nav-links">
+            <li class="nav-item active" data-page="voice">
+                <i class="fas fa-microphone"></i><span>Voice</span>
+                <div class="nav-indicator"></div>
+            </li>
+            <li class="nav-item" data-page="map">
+                <i class="fas fa-map-location-dot"></i><span>Map</span>
+                <div class="nav-indicator"></div>
+            </li>
+            <li class="nav-item" data-page="tasks">
+                <i class="fas fa-clipboard-list"></i><span>Tasks</span>
+                <div class="nav-indicator"></div>
+            </li>
+            <li class="nav-item" data-page="workview">
+                <i class="fas fa-chart-line"></i><span>Workview</span>
+                <div class="nav-indicator"></div>
+            </li>
+            <li class="nav-item" data-page="settings">
+                <i class="fas fa-sliders"></i><span>Settings</span>
+                <div class="nav-indicator"></div>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <div class="driver-pill">
+                <img src="https://ui-avatars.com/api/?name=Rajesh+Kumar&background=0D6EFD&color=fff" alt="Driver">
+                <div>
+                    <p class="driver-pill-name" id="sidebar-driver-name">Rajesh Kumar</p>
+                    <p class="driver-pill-status"><span class="dot-green"></span> On Duty</p>
+                </div>
+            </div>
+            <button class="logout-btn-sidebar" onclick="doLogout()" style="
+                width: 100%; margin-top: 12px; padding: 10px; border-radius: 9px;
+                border: 1px solid rgba(0,0,0,0.1); background: rgba(239, 68, 68, 0.05);
+                color: #EF4444; font-weight: 700; font-size: 0.85rem; cursor: pointer;
+                display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;
+            " onmouseover="this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.05)'">
+                <i class="fas fa-right-from-bracket"></i> Logout
+            </button>
+        </div>
+    </nav>
+
+    <!-- MAIN PANEL -->
+    <main class="main-panel">
+
+        <!-- TOP HEADER -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i></button>
+                <h1 class="page-title" id="page-title">Voice Dashboard</h1>
+            </div>
+            <div class="top-bar-right">
+                <div class="status-pill online" id="network-status">
+                    <i class="fas fa-wifi"></i> <span id="network-label">Online</span>
+                </div>
+                <div class="status-pill battery">
+                    <i class="fas fa-battery-three-quarters"></i>
+                    <span id="battery-label">60%</span>
+                </div>
+                <div class="notif-btn" id="notif-btn">
+                    <i class="fas fa-bell"></i>
+                    <span class="notif-badge" id="notif-count">3</span>
+                </div>
+                <div class="icon-btn" onclick="doLogout()" title="Logout" style="color:var(--danger); font-size:1.1rem; cursor:pointer; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                    <i class="fas fa-right-from-bracket"></i>
+                </div>
+                <img class="header-avatar" src="https://ui-avatars.com/api/?name=Rajesh+Kumar&background=0D6EFD&color=fff" alt="Profile">
+            </div>
+        </header>
+
+        <!-- TOAST NOTIFICATIONS PANEL -->
+        <div class="notif-panel" id="notif-panel">
+            <div class="notif-panel-header">
+                <h3>Notifications</h3>
+                <button id="clear-notifs">Clear all</button>
+            </div>
+            <div id="notif-list">
+                <div class="notif-item unread"><i class="fas fa-box text-primary"></i><div><b>Shipment 125 pending</b><p>Assigned but not started yet</p></div></div>
+                <div class="notif-item unread"><i class="fas fa-clock text-warning"></i><div><b>Shipment 123 ETA approaching</b><p>Due at 3:30 PM</p></div></div>
+                <div class="notif-item"><i class="fas fa-check text-success"></i><div><b>Shipment 124 delivered</b><p>Completed successfully</p></div></div>
+            </div>
+        </div>
+
+        <!-- PAGES WRAPPER -->
+        <div class="pages-wrapper">
+
+            <!-- ==================== PAGE: VOICE ==================== -->
+            <section class="page active" id="page-voice">
+                <div class="voice-grid">
+
+                    <div class="card ai-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-robot"></i> AI Voice Assistant</h2>
+                            <div class="card-actions">
+                                <button class="icon-btn" title="History"><i class="fas fa-history"></i></button>
+                            </div>
+                        </div>
+                        <div class="mic-zone">
+                            <div class="mic-ring" id="mic-ring">
+                                <button class="mic-btn" id="mic-btn">
+                                    <i class="fas fa-microphone" id="mic-icon"></i>
+                                </button>
+                            </div>
+                            <p class="mic-hint" id="mic-hint">Tap to speak</p>
+                        </div>
+                        <div class="convo-box" id="convo-box">
+                            <div class="convo-placeholder">
+                                <i class="fas fa-comments"></i>
+                                <p>Your conversation will appear here</p>
+                            </div>
+                        </div>
+                        <div class="chips-row">
+                            <span class="chip" data-cmd="Track shipment 123"><i class="fas fa-location-dot"></i> Track shipment 123</span>
+                            <span class="chip" data-cmd="Mark shipment 124 as delivered"><i class="fas fa-circle-check"></i> Mark 124 delivered</span>
+                            <span class="chip" data-cmd="What is my next stop?"><i class="fas fa-route"></i> Next stop?</span>
+                            <span class="chip" data-cmd="Report a delay due to traffic"><i class="fas fa-triangle-exclamation"></i> Report delay</span>
+                        </div>
+                    </div>
+
+                    <div class="right-col">
+                        <div class="card mini-card">
+                            <div class="card-header"><h2>Next Delivery</h2></div>
+                            <div class="next-delivery-body">
+                                <div class="next-ship-id" id="nd-id">Shipment 123</div>
+                                <div class="next-ship-addr text-muted" id="nd-addr">--</div>
+                                <div class="nd-footer">
+                                    <span class="eta-pill" id="nd-eta">ETA: --</span>
+                                    <button class="btn-primary-sm" id="nd-mark-btn" data-shipment="123">Mark Delivered</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mini-card">
+                            <div class="card-header"><h2>Driver Status</h2></div>
+                            <div class="driver-status-body">
+                                <div class="driver-badge">
+                                    <div class="active-dot"></div>
+                                    <div>
+                                        <div class="driver-badge-name" id="ds-name">Rajesh Kumar</div>
+                                        <div class="driver-badge-sub text-muted">On Duty · Active</div>
+                                    </div>
+                                </div>
+                                <div class="stat-row">
+                                    <div class="stat-box green">
+                                        <span class="stat-num" id="stat-completed">5</span>
+                                        <span class="stat-label">Completed</span>
+                                    </div>
+                                    <div class="stat-box orange">
+                                        <span class="stat-num" id="stat-pending">3</span>
+                                        <span class="stat-label">Pending</span>
+                                    </div>
+                                    <div class="stat-box blue">
+                                        <span class="stat-num" id="stat-total">8</span>
+                                        <span class="stat-label">Total</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mini-card map-mini-card">
+                            <div class="card-header">
+                                <h2>Delivery Map</h2>
+                                <button class="icon-btn text-primary" onclick="navigateTo('map')">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                            <div id="map-mini" class="map-embed"></div>
+                            <div class="map-overlay-label">
+                                <i class="fas fa-circle-dot text-primary"></i> Driver &nbsp;
+                                <i class="fas fa-map-pin text-warning"></i> Next Stop
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card tasks-preview-card">
+                        <div class="card-header">
+                            <h2>Delivery Tasks</h2>
+                            <button class="link-btn" onclick="navigateTo('tasks')">View All <i class="fas fa-arrow-right"></i></button>
+                        </div>
+                        <div class="task-list" id="voice-task-list">
+                            <div class="loading-tasks">Loading tasks...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== PAGE: MAP ==================== -->
+            <section class="page" id="page-map">
+                <div class="map-page-layout">
+                    <div class="map-sidebar-panel">
+                        <h3>Route Overview</h3>
+                        <div class="route-stops" id="route-stops">
+                            <!-- populated by JS -->
+                        </div>
+                        <div class="map-legend">
+                            <div><span class="legend-dot blue"></span> Driver Position</div>
+                            <div><span class="legend-dot green"></span> Delivery Stop</div>
+                            <div><span class="legend-dot orange"></span> Pending</div>
+                        </div>
+                    </div>
+                    <div id="map-full" class="map-full"></div>
+                </div>
+            </section>
+
+            <!-- ==================== PAGE: TASKS ==================== -->
+            <section class="page" id="page-tasks">
+                <div class="tasks-page-header">
+                    <div class="filter-tabs" id="filter-tabs">
+                        <button class="filter-tab active" data-filter="all">All</button>
+                        <button class="filter-tab" data-filter="In Progress">In Progress</button>
+                        <button class="filter-tab" data-filter="Pending">Pending</button>
+                        <button class="filter-tab" data-filter="Completed">Completed</button>
+                    </div>
+                    <div class="task-search-wrap">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input type="text" id="task-search" placeholder="Search shipment ID or address...">
+                    </div>
+                </div>
+                <div class="tasks-grid" id="tasks-grid">
+                    <!-- populated by JS -->
+                </div>
+            </section>
+
+            <!-- ==================== PAGE: WORKVIEW ==================== -->
+            <section class="page" id="page-workview">
+                <div class="admin-grid">
+                    <div class="card kpi-card">
+                        <div class="kpi-icon blue"><i class="fas fa-boxes-stacked"></i></div>
+                        <div class="kpi-data">
+                            <span class="kpi-num" id="wv-total">0</span>
+                            <span class="kpi-label">Total Shipments</span>
+                        </div>
+                    </div>
+                    <div class="card kpi-card">
+                        <div class="kpi-icon green"><i class="fas fa-circle-check"></i></div>
+                        <div class="kpi-data">
+                            <span class="kpi-num" id="wv-done">0</span>
+                            <span class="kpi-label">Delivered Today</span>
+                        </div>
+                    </div>
+                    <div class="card kpi-card">
+                        <div class="kpi-icon orange"><i class="fas fa-hourglass-half"></i></div>
+                        <div class="kpi-data">
+                            <span class="kpi-num" id="wv-pending">0</span>
+                            <span class="kpi-label">Pending / Transit</span>
+                        </div>
+                    </div>
+
+                    <div class="card chart-card">
+                        <div class="card-header"><h2>Delivery Timeline vs ETA</h2></div>
+                        <div class="bar-chart-wrap">
+                            <div class="bar-chart" id="bar-chart">
+                                <!-- JS generated bars -->
+                            </div>
+                            <div class="bar-labels" id="bar-labels"></div>
+                        </div>
+                    </div>
+
+                    <div class="card activity-card" style="grid-column: 1 / -1; max-height: 400px; overflow-y: auto;">
+                        <div class="card-header"><h2>Recent AI Interactions</h2></div>
+                        <ul class="activity-feed" id="wv-ai-logs">
+                            <li style="color:var(--muted);text-align:center;padding:20px;">No recent interactions.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== PAGE: SETTINGS ==================== -->
+            <section class="page" id="page-settings">
+                <div class="settings-grid">
+                    <div class="card settings-card">
+                        <div class="card-header"><h2><i class="fas fa-user-circle"></i> Driver Profile</h2></div>
+                        <div class="settings-group">
+                            <label>Driver Name</label>
+                            <input type="text" class="settings-input" id="set-driver-name" value="Rajesh Kumar">
+                        </div>
+                        <div class="settings-group">
+                            <label>Driver ID</label>
+                            <input type="text" class="settings-input" value="driver1" readonly>
+                        </div>
+                        <div class="settings-group">
+                            <label>Phone Number</label>
+                            <input type="text" class="settings-input" id="set-phone" placeholder="+91 9876543210">
+                        </div>
+                        <button class="btn-save" id="save-profile">Save Profile</button>
+                    </div>
+
+                    <div class="card settings-card">
+                        <div class="card-header"><h2><i class="fas fa-microphone-lines"></i> Voice Settings</h2></div>
+                        <div class="settings-group">
+                            <label>Language</label>
+                            <select class="settings-input" id="set-lang">
+                                <option value="en-US">English (US)</option>
+                                <option value="en-IN">English (India)</option>
+                                <option value="hi-IN">Hindi</option>
+                                <option value="ta-IN">Tamil</option>
+                            </select>
+                        </div>
+                        <div class="settings-group toggle-row">
+                            <label>Auto-speak AI responses</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="set-autospeak" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="settings-group toggle-row">
+                            <label>Wake word detection</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="set-wake-word">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="card settings-card">
+                        <div class="card-header"><h2><i class="fas fa-database"></i> Firebase Integration</h2></div>
+                        <div class="firebase-status" id="firebase-status">
+                            <i class="fas fa-circle-xmark text-warning"></i>
+                            <span>Using Mock Database</span>
+                        </div>
+                        <div class="settings-group">
+                            <label>Database URL</label>
+                            <input type="text" class="settings-input" id="set-db-url" placeholder="https://your-project.firebaseio.com">
+                        </div>
+                        <div class="settings-group">
+                            <label>Service Account Key</label>
+                            <div class="file-drop" id="key-drop">
+                                <i class="fas fa-file-arrow-up"></i>
+                                <p>Drop serviceAccountKey.json here</p>
+                                <input type="file" id="key-upload" accept=".json" hidden>
+                            </div>
+                        </div>
+                        <button class="btn-save" id="connect-firebase">Connect Firebase</button>
+                    </div>
+
+                    <div class="card settings-card">
+                        <div class="card-header"><h2><i class="fas fa-bell"></i> Notifications</h2></div>
+                        <div class="settings-group toggle-row">
+                            <label>ETA Alerts</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="settings-group toggle-row">
+                            <label>Delivery Confirmations</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="settings-group toggle-row">
+                            <label>Delay Warnings</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div><!-- /pages-wrapper -->
+        
+        <!-- Dashboard Animated Truck -->
+        <div class="dashboard-truck-lane">
+            <div class="animated-truck"><i class="fas fa-truck-fast"></i></div>
+        </div>
+    </main>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

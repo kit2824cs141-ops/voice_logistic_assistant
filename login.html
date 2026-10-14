@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceLog — Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0D6EFD;
+            --primary-dark: #0a58ca;
+            --bg: #F4F6F9;
+            --white: #FFFFFF;
+            --border: #E5E7EB;
+            --text: #1E2329;
+            --muted: #6B7280;
+            --danger: #EF4444;
+            --success: #1DB954;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body {
+            background: linear-gradient(-45deg, #0D6EFD, #4F46E5, #0ea5e9, #6366F1);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite, bodyFadeIn 0.5s ease-out;
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .login-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 20px;
+            padding: 48px 44px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.6);
+            animation: cardEnter 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.15) forwards, cardFloat 6s ease-in-out infinite 0.6s;
+        }
+        @keyframes cardEnter {
+            from { opacity: 0; transform: translateY(20px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes cardFloat {
+            0% { transform: translateY(0px); box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+            50% { transform: translateY(-8px); box-shadow: 0 28px 70px rgba(0,0,0,0.25); }
+            100% { transform: translateY(0px); box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+        }
+        .brand {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 36px; justify-content: center;
+        }
+        .brand-icon {
+            width: 44px; height: 44px; background: var(--primary);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.2rem;
+        }
+        .brand h1 { font-size: 1.6rem; font-weight: 800; }
+        .form-title { font-size: 1.1rem; font-weight: 600; text-align: center; margin-bottom: 6px; }
+        .form-sub { font-size: 0.85rem; color: var(--muted); text-align: center; margin-bottom: 28px; }
+
+        .role-tabs {
+            display: flex; background: var(--bg); border-radius: 10px;
+            padding: 4px; gap: 4px; margin-bottom: 24px;
+        }
+        .role-tab {
+            flex: 1; padding: 10px; border-radius: 8px; font-size: 0.875rem;
+            font-weight: 600; cursor: pointer; border: none; background: none;
+            color: var(--muted); transition: all 0.2s ease; display: flex;
+            align-items: center; justify-content: center; gap: 7px;
+        }
+        .role-tab.active { background: white; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+        .form-input {
+            width: 100%; padding: 12px 16px;
+            border: 1.5px solid var(--border); border-radius: 10px;
+            font-size: 0.9rem; color: var(--text); outline: none;
+            transition: all 0.2s ease; background: var(--bg);
+        }
+        .form-input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(13,110,253,0.1); }
+        
+        .password-wrap { position: relative; }
+        .password-wrap .form-input { padding-right: 44px; }
+        .toggle-pw {
+            position: absolute; right: 14px; top: 50%;
+            transform: translateY(-50%); color: var(--muted);
+            cursor: pointer; font-size: 0.9rem; border: none; background: none;
+        }
+
+        .btn-login {
+            width: 100%; padding: 13px; background: var(--primary);
+            color: white; border: none; border-radius: 10px;
+            font-size: 0.95rem; font-weight: 700; cursor: pointer;
+            transition: all 0.2s ease; margin-top: 8px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-login:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(13,110,253,0.35); }
+        .btn-login:disabled { opacity: 0.7; transform: none; cursor: not-allowed; }
+
+        .error-msg {
+            display: none; background: #FEF2F2; border: 1px solid #FECACA;
+            color: var(--danger); padding: 10px 14px; border-radius: 8px;
+            font-size: 0.83rem; margin-bottom: 14px; align-items: center; gap: 8px;
+        }
+        .error-msg.show { display: flex; }
+
+        .demo-hint {
+            margin-top: 22px; padding: 14px;
+            background: #EEF2FF; border-radius: 10px;
+        }
+        .demo-hint p { font-size: 0.78rem; color: #4338CA; font-weight: 600; margin-bottom: 8px; }
+        .demo-creds { display: flex; flex-direction: column; gap: 4px; }
+        .demo-cred { font-size: 0.75rem; color: #4338CA; display: flex; justify-content: space-between; }
+        .demo-cred span { font-family: monospace; background: white; padding: 1px 6px; border-radius: 4px; }
+
+        /* Voice Enrollment Styles */
+        .voice-enroll-card {
+            display: none;
+            background: var(--white);
+            border-radius: 20px;
+            padding: 48px 44px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .voice-enroll-card.show { display: block; }
+        .mic-icon-large {
+            font-size: 3rem; color: var(--primary);
+            margin: 24px 0; display: inline-block;
+            width: 100px; height: 100px; line-height: 100px;
+            border-radius: 50%; background: var(--bg);
+            transition: all 0.3s ease;
+        }
+        .mic-icon-large.recording {
+            color: white; background: var(--danger);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .step-dots { display: flex; justify-content: center; gap: 8px; margin: 20px 0; }
+        .step-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+        .step-dot.active { background: var(--primary); }
+        .step-dot.done { background: var(--success); }
+
+        /* ── ANIMATED TRUCK (Login Top) ── */
+        .login-truck-lane {
+            position: absolute;
+            top: 20px; left: 0; width: 100%; height: 60px;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 10;
+        }
+        .animated-truck {
+            position: absolute;
+            bottom: 12px;
+            left: -80px;
+            font-size: 2rem;
+            color: rgba(255, 255, 255, 0.95);
+            animation: driveTruck 14s linear infinite;
+        }
+        .animated-truck::after {
+            content: '';
+            position: absolute;
+            right: -16px; top: 18px;
+            width: 12px; height: 3px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 4px;
+            box-shadow: 16px 0 0 rgba(255, 255, 255, 0.4), 32px 0 0 rgba(255, 255, 255, 0.2);
+            animation: exhaust 0.4s linear infinite;
+        }
+        @keyframes driveTruck {
+            0% { transform: translateX(-100px); }
+            100% { transform: translateX(110vw); }
+        }
+        @keyframes exhaust {
+            0% { transform: translateX(0); opacity: 1; }
+            100% { transform: translateX(-15px); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Animated Truck across the top -->
+<div class="login-truck-lane">
+    <div class="animated-truck"><i class="fas fa-truck-fast"></i></div>
+</div>
+
+<div class="login-card">
+    <div class="brand">
+        <div class="brand-icon"><i class="fas fa-truck-moving"></i></div>
+        <h1>VoiceLog</h1>
+    </div>
+
+    <div class="role-tabs" id="mode-tabs">
+        <button class="role-tab active" id="tab-signin" onclick="setMode('signin')">
+            <i class="fas fa-right-to-bracket"></i> Sign In
+        </button>
+        <button class="role-tab" id="tab-signup" onclick="setMode('signup')">
+            <i class="fas fa-user-plus"></i> Sign Up
+        </button>
+    </div>
+
+    <!-- role select for sign-in only -->
+    <div id="signin-role-tabs" class="role-tabs" style="margin-top: -12px; margin-bottom: 8px;">
+        <button class="role-tab active" id="tab-admin" onclick="setRole('admin')">
+            <i class="fas fa-shield-halved"></i> Admin
+        </button>
+        <button class="role-tab" id="tab-driver" onclick="setRole('driver')">
+            <i class="fas fa-truck"></i> Driver
+        </button>
+    </div>
+
+    <div class="form-title" id="form-title">Admin Login</div>
+    <div class="form-sub" id="form-sub">Manage shipments and driver assignments</div>
+
+    <form id="login-form" onsubmit="return false;">
+        <div class="error-msg" id="error-msg">
+            <i class="fas fa-circle-exclamation"></i>
+            <span id="error-text">Login failed. Please check your credentials.</span>
+        </div>
+
+        <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" class="form-input" id="email-input" placeholder="Enter your email" required>
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <div class="password-wrap">
+                <input type="password" class="form-input" id="password-input" placeholder="Enter your password" required>
+                <button type="button" class="toggle-pw" onclick="togglePw()">
+                    <i class="fas fa-eye" id="pw-eye"></i>
+                </button>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-login" id="login-btn" onclick="doLogin()">
+            <i class="fas fa-right-to-bracket"></i>
+            <span id="btn-text">Sign In</span>
+        </button>
+    </form>
+
+    <!-- SIGN UP FORM -->
+    <form id="signup-form" style="display:none;" onsubmit="return false;">
+        <div class="error-msg" id="signup-error-msg">
+            <i class="fas fa-circle-exclamation"></i>
+            <span id="signup-error-text">Registration failed.</span>
+        </div>
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" class="form-input" id="signup-name" placeholder="Your full name" required>
+        </div>
+        <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" class="form-input" id="signup-email" placeholder="Enter your email" required>
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <div class="password-wrap">
+                <input type="password" class="form-input" id="signup-password" placeholder="Min 6 characters" required>
+                <button type="button" class="toggle-pw" onclick="toggleSignupPw()">
+                    <i class="fas fa-eye" id="signup-pw-eye"></i>
+                </button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Role</label>
+            <div class="role-tabs" style="margin-top:4px">
+                <button type="button" class="role-tab active" id="tab-su-admin" onclick="setSignupRole('admin')">
+                    <i class="fas fa-shield-halved"></i> Admin
+                </button>
+                <button type="button" class="role-tab" id="tab-su-driver" onclick="setSignupRole('driver')">
+                    <i class="fas fa-truck"></i> Driver
+                </button>
+            </div>
+        </div>
+        <button type="submit" class="btn-login" id="signup-btn" onclick="doSignup()">
+            <i class="fas fa-user-plus"></i>
+            <span id="signup-btn-text">Create Account</span>
+        </button>
+    </form>
+
+    <div class="demo-hint">
+        <p><i class="fas fa-circle-info"></i> Demo Credentials</p>
+        <div class="demo-creds">
+            <div class="demo-cred">Admin: <span>admin@voicelog.com</span> <span>Admin@1234</span></div>
+            <div class="demo-cred">Driver: <span>driver@voicelog.com</span> <span>Driver@1234</span></div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Firebase SDK (update the config below with your project values) -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+// ─── PASTE YOUR FIREBASE CONFIG FROM STEP 8 HERE ───
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBSZOsj77aGHTpQIyyMl6QEUrZd63d5HiQ",
+  authDomain: "voicelog-app-974a1.firebaseapp.com",
+  databaseURL: "https://voicelog-app-974a1-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "voicelog-app-974a1",
+  storageBucket: "voicelog-app-974a1.firebasestorage.app",
+  messagingSenderId: "222162056235",
+  appId: "1:222162056235:web:3bcb69582fab3201ea266e",
+  measurementId: "G-D3FE5VKVR9"
+};
+// ────────────────────────────────────────────────────
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+let selectedRole = 'admin';
+let signupRole = 'admin';
+
+// Toggle between Sign In and Sign Up modes
+window.setMode = function(mode) {
+    const isSignup = mode === 'signup';
+    document.getElementById('tab-signin').classList.toggle('active', !isSignup);
+    document.getElementById('tab-signup').classList.toggle('active', isSignup);
+    document.getElementById('login-form').style.display = isSignup ? 'none' : 'block';
+    document.getElementById('signup-form').style.display = isSignup ? 'block' : 'none';
+    document.getElementById('signin-role-tabs').style.display = isSignup ? 'none' : 'flex';
+    document.getElementById('form-title').textContent = isSignup ? 'Create Account' : (selectedRole === 'admin' ? 'Admin Login' : 'Driver Login');
+    document.getElementById('form-sub').textContent = isSignup ? 'Join LogiVoice today' : (selectedRole === 'admin' ? 'Manage shipments and driver assignments' : 'View your assigned deliveries');
+};
+
+window.setSignupRole = function(role) {
+    signupRole = role;
+    document.getElementById('tab-su-admin').classList.toggle('active', role === 'admin');
+    document.getElementById('tab-su-driver').classList.toggle('active', role === 'driver');
+};
+
+window.setRole = function(role) {
+    selectedRole = role;
+    document.getElementById('tab-admin').classList.toggle('active', role === 'admin');
+    document.getElementById('tab-driver').classList.toggle('active', role === 'driver');
+    document.getElementById('form-title').textContent = role === 'admin' ? 'Admin Login' : 'Driver Login';
+    document.getElementById('form-sub').textContent   = role === 'admin'
+        ? 'Manage shipments and driver assignments'
+        : 'View your assigned deliveries';
+    document.getElementById('email-input').value    = role === 'admin' ? 'admin@voicelog.com'  : 'driver@voicelog.com';
+    document.getElementById('password-input').value = role === 'admin' ? 'Admin@1234' : 'Driver@1234';
+
+};
+
+window.togglePw = function() {
+    const inp = document.getElementById('password-input');
+    const eye = document.getElementById('pw-eye');
+    if (inp.type === 'password') { inp.type = 'text'; eye.className = 'fas fa-eye-slash'; }
+    else { inp.type = 'password'; eye.className = 'fas fa-eye'; }
+};
+
+window.toggleSignupPw = function() {
+    const inp = document.getElementById('signup-password');
+    const eye = document.getElementById('signup-pw-eye');
+    if (inp.type === 'password') { inp.type = 'text'; eye.className = 'fas fa-eye-slash'; }
+    else { inp.type = 'password'; eye.className = 'fas fa-eye'; }
+};
+
+window.doSignup = async function() {
+    const name     = document.getElementById('signup-name').value.trim();
+    const email    = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const btn      = document.getElementById('signup-btn');
+    const errDiv   = document.getElementById('signup-error-msg');
+    const errText  = document.getElementById('signup-error-text');
+
+    if (!name || !email || !password) { return; }
+    if (password.length < 6) {
+        errText.textContent = 'Password must be at least 6 characters.';
+        errDiv.classList.add('show'); return;
+    }
+
+    btn.disabled = true;
+    document.getElementById('signup-btn-text').textContent = 'Creating account...';
+    errDiv.classList.remove('show');
+
+    try {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = cred.user.uid;
+        const userData = {
+            name, email, role: signupRole,
+            status: signupRole === 'driver' ? 'Active' : null,
+            completed: 0, pending: 0,
+            createdAt: Date.now()
+        };
+        await set(ref(db, `users/${uid}`), userData);
+
+        localStorage.setItem('vl_uid',  uid);
+        localStorage.setItem('vl_role', signupRole);
+        localStorage.setItem('vl_name', name);
+        localStorage.setItem('vl_token', await cred.user.getIdToken());
+
+        finalizeLogin(signupRole);
+    } catch (err) {
+        let msg = err.message;
+        if (msg.includes('email-already-in-use')) msg = 'This email is already registered. Please Sign In.';
+        else if (msg.includes('invalid-email')) msg = 'Please enter a valid email address.';
+        errText.textContent = msg;
+        errDiv.classList.add('show');
+        btn.disabled = false;
+        document.getElementById('signup-btn-text').textContent = 'Create Account';
+    }
+};
+
+window.doLogin = async function() {
+    const email    = document.getElementById('email-input').value.trim();
+    const password = document.getElementById('password-input').value;
+    const btn      = document.getElementById('login-btn');
+    const errDiv   = document.getElementById('error-msg');
+    const errText  = document.getElementById('error-text');
+
+    if (!email || !password) { return; }
+
+    btn.disabled = true;
+    document.getElementById('btn-text').textContent = 'Signing in...';
+    errDiv.classList.remove('show');
+
+    try {
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        const uid  = cred.user.uid;
+
+        // Fetch user profile from Realtime Database
+        const snap = await get(ref(db, `users/${uid}`));
+        let userData = snap.val();
+
+        // ─── AUTO-CREATE PROFILE if it doesn't exist yet ───
+        // This happens on first login before the DB is manually seeded
+        if (!userData) {
+            // Use the role tab the user selected on the login page
+            const inferredRole = selectedRole; // 'admin' or 'driver'
+            const inferredName = inferredRole === 'admin' ? 'Admin User' : 'Driver';
+            userData = {
+                name:  inferredName,
+                role:  inferredRole,
+                email: email,
+                status: inferredRole === 'driver' ? 'Active' : null,
+                completed: 0,
+                pending:   0,
+            };
+            // Write the auto-created profile to Firebase
+            const { set: fbSet, ref: fbRef } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js");
+            await fbSet(fbRef(db, `users/${uid}`), userData);
+            console.log(`Auto-created profile for ${email} as ${inferredRole}`);
+        }
+
+        const role = userData.role || 'driver';
+
+        // Store session
+        localStorage.setItem('vl_uid',  uid);
+        localStorage.setItem('vl_role', role);
+        localStorage.setItem('vl_name', userData.name || email);
+        localStorage.setItem('vl_token', await cred.user.getIdToken());
+
+        finalizeLogin(role);
+
+    } catch (err) {
+        let msg = err.message;
+        if (msg.includes('auth/invalid-credential') || msg.includes('auth/wrong-password')) {
+            msg = 'Invalid email or password. Please try again.';
+        } else if (msg.includes('auth/too-many-requests')) {
+            msg = 'Too many failed attempts. Try again later.';
+        }
+        errText.textContent = msg;
+        errDiv.classList.add('show');
+        btn.disabled = false;
+        document.getElementById('btn-text').textContent = 'Sign In';
+    }
+};
+
+function finalizeLogin(role) {
+    if (role === 'admin') {
+        window.location.href = '/admin-panel';
+    } else {
+        window.location.href = '/dashboard';
+    }
+}
+
+</script>
+</body>
+</html>
